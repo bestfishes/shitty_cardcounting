@@ -8,7 +8,7 @@
 import random
 import itertools
 
-# data
+# new classes
 class Card(object):
     def __init__(self, rank, suit):
         self.rank = rank
@@ -28,10 +28,40 @@ class Card(object):
             self.rank = str(self.rank)
         self.suit = str(self.suit)
         self.name = ''.join((self.rank,self.suit))
+        self.facedown = False
         # Note to self: have not implemented aces high function yet.
+
+    def deal_facedown(self):
+        self.facedown = True
+
+    def __repr__(self):
+        if self.facedown == False:
+            return self.name
+        else:
+            return 'XX'
+
+class Player(object):
+    def __init__(self,player_number):
+        self.player_number = player_number
+        self.name = "Player%s" % (player_number)
+        self.cards = []
+        self.count = 0
+
+    def get_new_card(self, card):
+        self.cards.append(card)
+        self.count = self.count + card.value
 
     def __repr__(self):
         return self.name
+
+class Dealer(Player):
+    def __init__(self):
+        self.name = "Dealer"
+        self.cards = []
+        self.count = 0
+    
+
+# functions
 
 def create_deck(number_of_decks):
     deck = []
@@ -44,21 +74,26 @@ def create_deck(number_of_decks):
             deck.append(new_card)
     return deck
 
-def dealing_the_cards(players):
-    table = {}
-    for player in range(players):
-        player_name = 'Player %s' % (player+1)
-        table[player_name] = current_deck[player]
-        #current_deck.pop([player])
-    table['Dealer'] = current_deck[players]
-    return table
-
 
 #Setting up and shuffling the deck
 number_of_decks = 1
 current_deck = create_deck(number_of_decks)
 random.shuffle(current_deck)
 print(current_deck)
+
+#Sitting at the table:
+number_of_players = 2
+table = []
+for player in range(number_of_players):
+    table.append(Player(player + 1))
+    print(str(player))
+    print(table[player])
+    print(table[player].count)
+table.append(Dealer())
+
+print(table)
+print(table[1].count)
+print(table[1].cards)
 
 #Placing the bet
 # yet to be implemented...
@@ -67,7 +102,24 @@ print(current_deck)
 #Also yet to be implemented...
 
 #The deal:
-number_of_players = 2
-table = dealing_the_cards(number_of_players)
-print(table)
+#First card
+ # Most of this should go in a function
+for i in range(len(table)):
+    table[i].get_new_card(current_deck[0])
+    current_deck.pop(0)
+    print(table[i])
+    print(table[i].cards)
+
+#Second card, face up to the tables to players,facedown to the dealer
+for i in range(len(table)-1):
+    table[i].get_new_card(current_deck[0])
+    current_deck.pop(0)
+    print(table[i])
+    print(table[i].cards)
+current_deck[0].deal_facedown()
+table[-1].get_new_card(current_deck[0])
+current_deck.pop(0)
+print(table[-1])
+print(table[-1].cards)
+
 
