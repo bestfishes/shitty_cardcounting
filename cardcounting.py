@@ -69,15 +69,58 @@ class Player(object):
         self.inplay = True
         self.payout = False
 
+    def player_choice(self):
+        while self.count < 21:
+            print("%s's count is %s and their cards are:" % (str(self.name), str(self.count)))
+            print(self.cards)
+            choice = input("Should %s hit (h) or stand (s)?" % (str(self.name)))
+            if choice.lower() == "h":
+                self.get_new_card(current_deck[0])
+                print(self.cards[-1])
+                current_deck.pop(0)
+                continue
+                #Double check this continue
+            elif choice.lower() == "s":
+                self.inplay = False
+                return
+            else:
+                print("Not a valid choice")
+                continue 
+        else:
+            if self.count == 21:
+                print("player hit a blackjack!")
+                self.inplay = False
+            else:
+                print("Player went bust!")
+                self.inplay = False
+                print("Dealer collects %s's wager" % (str(self.name)))
+                self.payout = True
+        return
+
     def __repr__(self):
         return self.name
+
+
 
 class Dealer(Player):
     def __init__(self):
         self.name = "Dealer"
         self.cards = []
         self.count = 0
-    
+        self.inplay = True
+        self.payout = False
+
+    def player_choice(self):
+        self.cards[1].flip_card_up()
+        print("The Dealer's hand is: ")
+        print(self.cards)
+        while self.count <= 16:
+            self.get_new_card(current_deck[0])
+            current_deck.pop(0)
+        print(self.cards)
+        print("The dealer's count is %s." % (self.count))
+        self.inplay = False
+        return
 
 # functions
 
@@ -92,32 +135,6 @@ def create_deck(number_of_decks):
             deck.append(new_card)
     return deck
 
-def player_choice(player):
-    while player.count < 21:
-        print("%s's count is %s and their cards are:" % (str(player), str(player.count)))
-        print(player.cards)
-        choice = input("Should %s hit (h) or stand (s)?" % (str(player)))
-        if choice.lower() == "h":
-            player.get_new_card(current_deck[0])
-            print(player.cards[-1])
-            current_deck.pop(0)
-            continue
-        elif choice.lower() == "s":
-            player.inplay = False
-            return
-        else:
-            print("Not a valid choice")
-            continue 
-    else:
-        if player.count == 21:
-            print("player hit a blackjack!")
-            player.inplay = False
-        else:
-            print("Player went bust!")
-            player.inplay = False
-            print("Dealer collects %s's wager" % (str(player)))
-            player.payout = True
-        return
     
 def hand_payout(player, dealer):
     if player.count > 21:
@@ -234,18 +251,11 @@ while (playing == True and (len(current_deck) >= 4*len(table))):
 
    
 #Here: Playing a hand.
-    for i in range(len(table)-1):
+    for i in range(len(table)):
         while table[i].inplay == True:
-            player_choice(table[i])
+            table[i].player_choice()
     #dealer's hand:
-    table[-1].cards[1].flip_card_up()
-    print("The Dealer's hand is: ")
-    print(table[-1].cards)
-    while table[-1].count <= 16:
-        table[-1].get_new_card(current_deck[0])
-        current_deck.pop(0)
-        print(table[-1].cards)
-    print("The dealer's count is %s." % (table[-1].count))
+
     for i in range(len(table)-1):
         while table[i].payout == False:
             hand_payout(table[i], table[-1])
