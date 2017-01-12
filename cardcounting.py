@@ -73,8 +73,15 @@ class Player:
         self.inplay = True
         self.payout = False
         self.strategy = "user choice"
+        self.splitcards = []
+        self.splitcount = 0
 
-    def get_new_card(self, card):
+    def get_new_card(self, card, split = ''):
+        if split == 'first_split': #This is a terrible iteration. Redo it. 
+            temp_cards = self.cards
+            temp_count = self.count
+            self.cards = self.splitcards
+            self.count = self.splitcount
         self.cards.append(card)
         self.count = self.count + card.value
         if self.count > 21:
@@ -85,6 +92,11 @@ class Player:
                     i.value = 1
                     first = False
                 self.count = self.count + i.value
+        if split == 'first_split':
+            self.splitcards = self.cards
+            self.splitcount = self.count
+            self.cards = temp_cards
+            self.count = temp_count   
               
 
     def reset_new_hand(self):
@@ -92,12 +104,39 @@ class Player:
         self.count = 0
         self.inplay = True
         self.payout = False
+        self.splitcards = []
+        self.splitcount = 0
 
     def player_choice(self):
-        while self.count < 21:
-            print("%s's count is %s and their cards are:" % (str(self.name), str(self.count)))
+        if self.cards[0].rank == self.cards[1].rank:
+            split_choice = ''
+            while split_choice.lower() not in ['y', 'n']:
+                split_choice = input("should %s split their cards?" % (self.name))
+            self.split_cards()
+        while self.splitcount > 0 and self.splitcount < 21:
+            print("%s's count is %d and their cards are:" % (self.name, self.count))
             print(self.cards)
-            choice = input("Should %s hit (h) or stand (s)?" % (str(self.name)))
+            choice = input("Should %s hit (h) or stand (s)?" % (self.name))
+            if choice.lower() == "h":
+                self.get_new_card(current_deck.pop(0))
+                print(self.cards[-1])
+                continue
+                #Double check this continue
+            elif choice.lower() == "s":
+                self.inplay = False
+                return
+            else:
+                print("Not a valid choice")
+                continue 
+            if self.count == 21:
+                print("player got 21")
+            else:
+                print("Player's split hand went bust!")
+                print("Dealer collects %s's wager" % (self.name))
+        while self.count < 21:
+            print("%s's count is %d and their cards are:" % (self.name, self.count))
+            print(self.cards)
+            choice = input("Should %s hit (h) or stand (s)?" % (self.name))
             if choice.lower() == "h":
                 self.get_new_card(current_deck.pop(0))
                 print(self.cards[-1])
@@ -118,6 +157,14 @@ class Player:
                 self.inplay = False
                 print("Dealer collects %s's wager" % (str(self.name)))
                 self.payout = True
+        return
+   
+    def split_cards(self):
+        print("You've chosen to split your cards!")
+        print("You will double your bet!")
+        self.splitcards.append(self.cards.pop(1))
+        print(self.splitcards)
+        print(self.cards)
         return
 
     def __repr__(self):
@@ -176,6 +223,30 @@ class Dealer(Player):
         return
 
 # functions
+def players_pairs(number_of_decks, table_size):
+    deck = []
+    new_deck = []
+    suits = ('C', 'D', 'H', 'S')
+    ranks = [x for x in range(1,14)]
+    print(ranks)
+    print(table_size)
+    end_point = 2*(table_size+1)
+    print(end_point)
+    for i in range(end_point):
+        print(i)
+        if i <= table_size:
+            new_card = Card(4,'S')
+        else:
+            new_card = Card(4,'D')
+        deck.append(new_card)
+    for i in range(number_of_decks):        
+        deck_list = itertools.product(ranks,suits)
+        for elem in deck_list:
+            new_card = Card(elem[0],elem[1])
+            new_deck.append(new_card)
+    random.shuffle(new_deck)
+    deck += new_deck
+    return deck
 
 def create_deck(number_of_decks):
     deck = []
@@ -207,7 +278,8 @@ def hand_payout(player, dealer):
 #Setting up and shuffling the deck
 number_of_players = 2
 number_of_decks = 6
-current_deck = create_deck(number_of_decks)
+#current_deck = create_deck(number_of_decks)
+current_deck = players_pairs(number_of_decks, number_of_players)
 print(current_deck)
 
 player_types = { '1' : Player, '2' : Dealer_Mimick, '3' : Basic_Strategy}
