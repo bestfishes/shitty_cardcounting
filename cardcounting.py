@@ -75,6 +75,8 @@ class Player:
         self.splithand = None
         self.firstsplit = None
         self.iteration = iteration
+        self.win_amount = 0
+        self.table_bet = 0
 
     def get_new_card(self, card):
         self.cards.append(card)
@@ -96,9 +98,9 @@ class Player:
         self.splithand = None
         self.firstsplit = None
         self.iteration = 1
+        self.table_bet = 0
 
     def player_choice(self):
-        #Need to figure out how to run this through a second time with second card hand. 
         while self.cards[0].rank == self.cards[1].rank and self.iteration < 3:
             split_choice = ''
             while split_choice.lower() not in ['y', 'n']:                
@@ -124,27 +126,24 @@ class Player:
                 continue 
         else:
             if self.count == 21:
-                if self.iteration == 1:
-                    print("player hit a blackjack!")
-                else:
-                    print("Player has 21 points.")
+                print("Player has 21 points.")
                 self.inplay = False
             else:
                 print("Player went bust!")
                 self.inplay = False
                 print("Dealer collects %s's wager" % (self.name))
+                pay_bet(self, self.table_bet, False)
                 self.payout = True
         return
    
     def split_cards(self):
         print("You've chosen to split your cards!")
-        print("You will double your bet!")
-        #Remember to make new bet
         new_iteration = self.iteration + 1
         new_name = str(self.player_number) + '-' + str(new_iteration)
         if self.splithand != None:
             self.firstsplit = self.splithand
         self.splithand = Player(new_name, iteration = new_iteration)
+        self.splithand.table_bet = self.table_bet
         print('new iteration is %d' % (self.splithand.iteration))
         self.splithand.get_new_card(self.cards.pop(1))
         print('%s hand count is %d and the cards are: ' % (self.splithand.name, self.splithand.count))
@@ -155,7 +154,6 @@ class Player:
         print(self.splithand.cards)          
         self.get_new_card(current_deck.pop(0))
         self.splithand.player_choice()
-        #Remember to add bet amount to new bet amount
         return
 
     def __repr__(self):
@@ -164,7 +162,7 @@ class Player:
 
 
 class Dealer_Mimick(Player):
-    def __init__(self,player_number):
+    def __init__(self,player_number, iteration = 1):
         self.player_number = player_number
         self.name = "Player_%s" % (player_number)
         self.cards = []
@@ -172,6 +170,11 @@ class Dealer_Mimick(Player):
         self.inplay = True
         self.payout = False
         self.strategy = "mimicking the dealer"
+        self.splithand = None
+        self.firstsplit = None
+        self.iteration = iteration
+        self.win_amount = 0
+        self.table_bet = 0
 
     def player_choice(self):
         print("%s's count is %d and their cards are:" % (self.name, self.count))
@@ -185,7 +188,7 @@ class Dealer_Mimick(Player):
         return
 
 class Basic_Strategy(Player):
-    def __init__(self,player_number):
+    def __init__(self,player_number, iteration = 1):
         self.player_number = player_number
         self.name = "Player_%s" % (player_number)
         self.cards = []
@@ -193,6 +196,11 @@ class Basic_Strategy(Player):
         self.inplay = True
         self.payout = False
         self.strategy = "basic strategy"
+        self.splithand = None
+        self.firstsplit = None
+        self.iteration = iteration
+        self.win_amount = 0
+        self.table_bet = 0
 
 class Dealer(Player):
     def __init__(self):
@@ -202,6 +210,7 @@ class Dealer(Player):
         self.inplay = True
         self.payout = False
         self.strategy = "Dealer"
+        self.win_amount = 0
 
     def player_choice(self):
         self.cards[1].flip_card_up()
@@ -215,30 +224,6 @@ class Dealer(Player):
         return
 
 # functions
-def players_pairs(number_of_decks, table_size):
-    deck = []
-    new_deck = []
-    suits = ('C', 'D', 'H', 'S')
-    ranks = [x for x in range(1,14)]
-    print(ranks)
-    print(table_size)
-    end_point = 4*(table_size+1)
-    print(end_point)
-    for i in range(end_point):
-        print(i)
-        if i <= 2*table_size+1:
-            new_card = Card(4,'S')
-        else:
-            new_card = Card(4,'D')
-        deck.append(new_card)
-    for i in range(number_of_decks):        
-        deck_list = itertools.product(ranks,suits)
-        for elem in deck_list:
-            new_card = Card(elem[0],elem[1])
-            new_deck.append(new_card)
-    random.shuffle(new_deck)
-    deck += new_deck
-    return deck
 
 def create_deck(number_of_decks):
     deck = []
@@ -251,27 +236,38 @@ def create_deck(number_of_decks):
             deck.append(new_card)
     random.shuffle(deck)
     return deck
-        
+
+def pay_bet(player, bet_amount, player_wins, payoff_rate = 1):
+    if player_wins == True:
+        table[-1].win_amount = table[-1].win_amount - payoff_rate*player.table_bet
+        player.win_amount = player.win_amount + payoff_rate*player.table_bet 
+    else:
+        table[-1].win_amount = table[-1].win_amount + payoff_rate*player.table_bet
+        player.win_amount = player.win_amount - payoff_rate*player.table_bet 
+
   
 def hand_payout(player, dealer):
     if player.count > 21:
         print("Player busts. Dealer collects %s's wager" % (str(player)))
+        pay_bet(player, player.table_bet, False)
     elif dealer.count >21:
         print("Dealer busts, pays %s the amount of their bet" % (str(player)))
+        pay_bet(player, player.table_bet, True)
     elif player.count < dealer.count:
         print("Dealer wins, and collects %s's wager" % (str(player)))
+        pay_bet(player, player.table_bet, False)
     elif player.count > dealer.count:
         print("Dealer loses. %s wins their wager amount" % (str(player)))
+        pay_bet(player, player.table_bet, True)
     else: 
         print("Dealer and %s tie. No money is exchanged" % (str(player)))
     player.payout = True
-    return
+    return 
 
 #Setting up and shuffling the deck
 number_of_players = 2
 number_of_decks = 6
-#current_deck = create_deck(number_of_decks)
-current_deck = players_pairs(number_of_decks, number_of_players)
+current_deck = create_deck(number_of_decks)
 print(current_deck)
 
 player_types = { '1' : Player, '2' : Dealer_Mimick, '3' : Basic_Strategy}
@@ -304,9 +300,14 @@ print()
     #Assumes the re-deal point is 1.5 decks in. 
 #First card
 playing = True
+bet_value = 5
 while (playing == True and (len(current_deck) >= 78)):
-    for i in range(len(table)):
+    for i in range(len(table)-1):
+        table[i].table_bet = bet_value
+        print('%s is betting $%d' % (table[i].name, table[i].table_bet))
+        print('%s\'s win amount is $%d' % (table[i].name, table[i].win_amount))
         table[i].get_new_card(current_deck.pop(0))
+    table[-1].get_new_card(current_deck.pop(0))
 
 
 #Second card, face up to the tables to players,facedown to the dealer
@@ -341,9 +342,11 @@ while (playing == True and (len(current_deck) >= 78)):
     if (dealer_naturals == True and player_naturals == False):
         print("dealer takes all the chips")
         for i in range(len(table)-1):
-            print("Dealer takes %s's wager" % (str(table[i])))
             table[i].inplay = False
+            pay_bet(table[i], table[i].table_bet, False)
             table[i].payout = True
+            print('the dealer\'s score is %d' % (table[-1].win_amount))
+            print('The Dealer\'s win amount is %d and %s\'s win amount is %d' % (table[-1].win_amount, table[i].name, table[i].win_amount))
         table[-1].inplay = False
     elif (dealer_naturals == True and player_naturals == True):
         for i in range(len(table)-1):
@@ -351,6 +354,8 @@ while (playing == True and (len(current_deck) >= 78)):
                 print(str(table[i]) + " takes his chips back")
             else:
                 print("The Dealer takes " + str(table[i]) + "'s chips")
+                pay_bet(table[i], table[i].table_bet, False)
+            print('The Dealer\'s win amount is %d and %s\'s win amount is %d' % (table[-1].win_amount, table[i].name, table[i].win_amount))
             table[i].inplay = False
             table[i].payout = True
         table[-1].inplay = False
@@ -359,8 +364,11 @@ while (playing == True and (len(current_deck) >= 78)):
         for i in range(len(table)-1):
             if table[i].count == 21:
                 print("Dealer pays " + str(table[i]) + " 1.5 times the bet")
+                pay_bet(table[i], table[i].table_bet, True, 1.5)
+                print('The Dealer\'s win amount is %d and %s\'s win amount is %d' % (table[-1].win_amount, table[i].name, table[i].win_amount))
                 table[i].inplay = False
                 table[i].payout = True
+                print('The Dealer\'s win amount is %d and %s\'s win amount is %d' % (table[-1].win_amount, table[i].name, table[i].win_amount))
             else:
                 print(str(table[i]) + " is still in play")
                 cont = True
@@ -379,23 +387,29 @@ while (playing == True and (len(current_deck) >= 78)):
         while table[i].payout == False:
             hand_payout(table[i], table[-1])
         if table[i].firstsplit != None:
+            #Need to add the split amount to initial win amount
             while table[i].firstsplit.payout == False:
                 hand_payout(table[i].firstsplit, table[-1])
+            table[i].win_amount = table[i].win_amount + table[i].firstsplit.win_amount   
             if table[i].firstsplit.splithand != None:
                 while table[i].firstsplit.splithand.payout == False:
                     hand_payout(table[i].firstsplit.splithand, table[-1])
+                table[i].win_amount = table[i].win_amount + table[i].firstsplit.splithand.win_amount
         if table[i].splithand != None:
             while table[i].splithand.payout == False:
                 hand_payout(table[i].splithand, table[-1])
-    print(current_deck)
+            table[i].win_amount = table[i].win_amount + table[i].splithand.win_amount 
+        print('The Dealer\'s win amount is %d and %s\'s win amount is %d' % (table[-1].win_amount, table[i].name, table[i].win_amount))    
+#    print(current_deck)
     
 
     
             
 
 # Restarts the hand. Should probably put everything in a function instead of this.           
-    choice = input("Do you want to play a hand? Enter y/n: ")
-    print(choice.lower())
+    choice = ''
+    while choice.lower() not in ['y', 'n']:
+        choice = input("Do you want to play a hand? Enter y/n: ")
     if choice.lower() == "n":
         playing = False
         print("Goodbye!")
