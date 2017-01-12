@@ -65,7 +65,7 @@ class Card:
 
 
 class Player:
-    def __init__(self,player_number):
+    def __init__(self,player_number, iteration = 1):
         self.player_number = player_number
         self.name = "Player_%s" % (player_number)
         self.cards = []
@@ -73,15 +73,11 @@ class Player:
         self.inplay = True
         self.payout = False
         self.strategy = "user choice"
-        self.splitcards = []
-        self.splitcount = 0
+        self.splithand = None
+        self.firstsplit = None
+        self.iteration = iteration
 
-    def get_new_card(self, card, split = ''):
-        if split == 'first_split': #This is a terrible iteration. Redo it. 
-            temp_cards = self.cards
-            temp_count = self.count
-            self.cards = self.splitcards
-            self.count = self.splitcount
+    def get_new_card(self, card):
         self.cards.append(card)
         self.count = self.count + card.value
         if self.count > 21:
@@ -92,47 +88,26 @@ class Player:
                     i.value = 1
                     first = False
                 self.count = self.count + i.value
-        if split == 'first_split':
-            self.splitcards = self.cards
-            self.splitcount = self.count
-            self.cards = temp_cards
-            self.count = temp_count   
-              
 
     def reset_new_hand(self):
         self.cards = []
         self.count = 0
         self.inplay = True
         self.payout = False
-        self.splitcards = []
-        self.splitcount = 0
+        self.splithand = None
+        self.firstsplit = None
+        self.iteration = 1
 
     def player_choice(self):
-        if self.cards[0].rank == self.cards[1].rank:
+        #Need to figure out how to run this through a second time with second card hand. 
+        while self.cards[0].rank == self.cards[1].rank and self.iteration < 3:
             split_choice = ''
-            while split_choice.lower() not in ['y', 'n']:
+            while split_choice.lower() not in ['y', 'n']:                
                 split_choice = input("should %s split their cards?" % (self.name))
-            self.split_cards()
-        while self.splitcount > 0 and self.splitcount < 21:
-            print("%s's count is %d and their cards are:" % (self.name, self.count))
-            print(self.cards)
-            choice = input("Should %s hit (h) or stand (s)?" % (self.name))
-            if choice.lower() == "h":
-                self.get_new_card(current_deck.pop(0))
-                print(self.cards[-1])
-                continue
-                #Double check this continue
-            elif choice.lower() == "s":
-                self.inplay = False
-                return
+            if split_choice.lower() == 'y':
+                self.split_cards()
             else:
-                print("Not a valid choice")
-                continue 
-            if self.count == 21:
-                print("player got 21")
-            else:
-                print("Player's split hand went bust!")
-                print("Dealer collects %s's wager" % (self.name))
+                break
         while self.count < 21:
             print("%s's count is %d and their cards are:" % (self.name, self.count))
             print(self.cards)
@@ -150,25 +125,44 @@ class Player:
                 continue 
         else:
             if self.count == 21:
-                print("player hit a blackjack!")
+                if self.iteration == 1:
+                    print("player hit a blackjack!")
+                else:
+                    print("Player has 21 points.")
                 self.inplay = False
             else:
                 print("Player went bust!")
                 self.inplay = False
-                print("Dealer collects %s's wager" % (str(self.name)))
+                print("Dealer collects %s's wager" % (self.name))
                 self.payout = True
         return
    
     def split_cards(self):
         print("You've chosen to split your cards!")
         print("You will double your bet!")
-        self.splitcards.append(self.cards.pop(1))
-        print(self.splitcards)
-        print(self.cards)
+        #Remember to make new bet
+        new_iteration = self.iteration + 1
+        new_name = str(self.player_number) + '-' + str(new_iteration)
+        if self.splithand != None:
+            self.firstsplit = self.splithand
+        self.splithand = Player(new_name, iteration = new_iteration)
+        print('new iteration is %d' % (self.splithand.iteration))
+        self.splithand.get_new_card(self.cards.pop(1))
+        print('%s hand count is %d and the cards are: ' % (self.splithand.name, self.splithand.count))
+        print(self.splithand.cards)
+        self.splithand.get_new_card(current_deck.pop(0))
+        self.count = self.cards[0].value
+        self.iteration += 1
+        print(self.splithand.cards)          
+        self.get_new_card(current_deck.pop(0))
+        self.splithand.player_choice()
+        #Remember to add bet amount to new bet amount
         return
 
     def __repr__(self):
         return self.name
+
+
 
 class Dealer_Mimick(Player):
     def __init__(self,player_number):
@@ -201,7 +195,6 @@ class Basic_Strategy(Player):
         self.payout = False
         self.strategy = "basic strategy"
 
-
 class Dealer(Player):
     def __init__(self):
         self.name = "Dealer"
@@ -230,11 +223,11 @@ def players_pairs(number_of_decks, table_size):
     ranks = [x for x in range(1,14)]
     print(ranks)
     print(table_size)
-    end_point = 2*(table_size+1)
+    end_point = 4*(table_size+1)
     print(end_point)
     for i in range(end_point):
         print(i)
-        if i <= table_size:
+        if i <= 2*table_size+1:
             new_card = Card(4,'S')
         else:
             new_card = Card(4,'D')
@@ -383,10 +376,18 @@ while (playing == True and (len(current_deck) >= 78)):
     for i in range(len(table)):
         while table[i].inplay == True:
             table[i].player_choice()
-
     for i in range(len(table)-1):
         while table[i].payout == False:
             hand_payout(table[i], table[-1])
+        if table[i].firstsplit != None:
+            while table[i].firstsplit.payout == False:
+                hand_payout(table[i].firstsplit, table[-1])
+            if table[i].firstsplit.splithand != None:
+                while table[i].firstsplit.splithand.payout == False:
+                    hand_payout(table[i].firstsplit.splithand, table[-1])
+        if table[i].splithand != None:
+            while table[i].splithand.payout == False:
+                hand_payout(table[i].splithand, table[-1])
     print(current_deck)
     
 
