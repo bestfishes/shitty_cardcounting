@@ -8,6 +8,7 @@
 # Current Play is with a 6 deck shoe
 # Cut is 1.5 decks in
 # Dealer stays on a soft 17 (for now)
+# No Surrendering (early or late)
 
 
 ### TO DO: 
@@ -18,9 +19,7 @@
 # Force correct selection on choice of player type
 # Add in - betting values
 #        - doubling down
-#        - splitting
 #        - double down after splitting
-#        - Surrendering (Early vs Late)
 #        - Insurance
 # Create basic strategy player
 
