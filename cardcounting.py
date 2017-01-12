@@ -4,12 +4,33 @@
 ### IMPORTANT NOTE : WRITTEN IN PYTHON3 ###
 # Because using languages you don't understand is always a good idea #
 
+# The RULES:
+# Current Play is with a 6 deck shoe
+# Cut is 1.5 decks in
+# Dealer stays on a soft 17 (for now)
+
+
+### TO DO: 
+# Change Dealer play so that he hits on a soft 17
+# Move all additional functions into player class and have choice pull from dictionary (some conceptualization needed)?
+    # Dealer keeps seperate class?
+# Clean up checking for naturals 
+# Force correct selection on choice of player type
+# Add in - betting values
+#        - doubling down
+#        - splitting
+#        - double down after splitting
+#        - Surrendering (Early vs Late)
+#        - Insurance
+# Create basic strategy player
+
+
 #First, creating the card deck.
 import random
 import itertools
 
 # new classes
-class Card(object):
+class Card:
     def __init__(self, rank, suit):
         self.rank = rank
         self.suit = suit
@@ -42,24 +63,27 @@ class Card(object):
         else:
             return 'XX'
 
-class Player(object):
+
+class Player:
     def __init__(self,player_number):
         self.player_number = player_number
-        self.name = "Player%s" % (player_number)
+        self.name = "Player_%s" % (player_number)
         self.cards = []
         self.count = 0
         self.inplay = True
         self.payout = False
-        self.strategy = "User Controlled"
+        self.strategy = "user choice"
 
     def get_new_card(self, card):
         self.cards.append(card)
         self.count = self.count + card.value
         if self.count > 21:
             self.count = 0
+            first = True
             for i in self.cards:
-                if i.ace == True:
+                if i.ace == True and i.value != 1 and first == True:
                     i.value = 1
+                    first = False
                 self.count = self.count + i.value
               
 
@@ -75,9 +99,8 @@ class Player(object):
             print(self.cards)
             choice = input("Should %s hit (h) or stand (s)?" % (str(self.name)))
             if choice.lower() == "h":
-                self.get_new_card(current_deck[0])
+                self.get_new_card(current_deck.pop(0))
                 print(self.cards[-1])
-                current_deck.pop(0)
                 continue
                 #Double check this continue
             elif choice.lower() == "s":
@@ -100,15 +123,36 @@ class Player(object):
     def __repr__(self):
         return self.name
 
-class Basic_Strategy(Player):
+class Dealer_Mimick(Player):
     def __init__(self,player_number):
         self.player_number = player_number
-        self.name = "Player%s" % (player_number)
+        self.name = "Player_%s" % (player_number)
         self.cards = []
         self.count = 0
         self.inplay = True
         self.payout = False
-        self.strategy = "Basic_Strategy"
+        self.strategy = "mimicking the dealer"
+
+    def player_choice(self):
+        print("%s's count is %d and their cards are:" % (self.name, self.count))
+        print(self.cards)
+        while self.count <= 16:
+            print("%s is choosing to hit." % (self.name))
+            self.get_new_card(current_deck.pop(0))
+            print(self.cards)
+        print("%s's count is %d." % (self.name, self.count))
+        self.inplay = False
+        return
+
+class Basic_Strategy(Player):
+    def __init__(self,player_number):
+        self.player_number = player_number
+        self.name = "Player_%s" % (player_number)
+        self.cards = []
+        self.count = 0
+        self.inplay = True
+        self.payout = False
+        self.strategy = "basic strategy"
 
 
 class Dealer(Player):
@@ -125,8 +169,7 @@ class Dealer(Player):
         print("The Dealer's hand is: ")
         print(self.cards)
         while self.count <= 16:
-            self.get_new_card(current_deck[0])
-            current_deck.pop(0)
+            self.get_new_card(current_deck.pop(0))
         print(self.cards)
         print("The dealer's count is %s." % (self.count))
         self.inplay = False
@@ -143,13 +186,10 @@ def create_deck(number_of_decks):
         for elem in deck_list:
             new_card = Card(elem[0],elem[1])
             deck.append(new_card)
+    random.shuffle(deck)
     return deck
-
-def choose_player():
-    choice = input("Choose 1 for User Controlled Player and 2 for Basic Strategy AI")
         
-
-    
+  
 def hand_payout(player, dealer):
     if player.count > 21:
         print("Player busts. Dealer collects %s's wager" % (str(player)))
@@ -165,27 +205,29 @@ def hand_payout(player, dealer):
     return
 
 #Setting up and shuffling the deck
+number_of_players = 2
 number_of_decks = 6
 current_deck = create_deck(number_of_decks)
-random.shuffle(current_deck)
 print(current_deck)
 
-player_types = { '1' : Player, '2' : Basic_Strategy}
+player_types = { '1' : Player, '2' : Dealer_Mimick, '3' : Basic_Strategy}
 
 #Sitting at the table:
     #This should get rewritten into an option/function to limit the number of players & Force a correct choice
-number_of_players = 2
-table = []
-for player in range(number_of_players):
-    choice = input("Choose 1 for User Controlled Player and 2 for Basic Strategy AI: ")
-    table.append(player_types[choice](player + 1))
-    print(str(player))
-    print(table[player])
-    print(table[player].count)
-    print(table[player].strategy)
-table.append(Dealer())
 
+table = []
+print("Please select a player type:")
+print("1 : User Controlled Player")
+print("2 : AI (Dealer Mimicking Strategy)")
+print("3 : AI (Basic Strategy) - Not Yet Operational")
+for player in range(number_of_players):
+    choice = input("Player_%d: " % (player+1))
+    table.append(player_types[choice](player + 1))
+    print('%s is using %s' % (table[player], table[player].strategy))
+table.append(Dealer())
+print()
 print(table)
+print()
 
 
 #Placing the bet
@@ -200,32 +242,28 @@ print(table)
 playing = True
 while (playing == True and (len(current_deck) >= 78)):
     for i in range(len(table)):
-        table[i].get_new_card(current_deck[0])
-        current_deck.pop(0)
+        table[i].get_new_card(current_deck.pop(0))
+
 
 #Second card, face up to the tables to players,facedown to the dealer
     for i in range(len(table)-1):
-        table[i].get_new_card(current_deck[0])
-        current_deck.pop(0)
+        table[i].get_new_card(current_deck.pop(0))
         print(table[i])
         print(table[i].cards)
         print(table[i].count)
         print()
     current_deck[0].deal_facedown()
-    table[-1].get_new_card(current_deck[0])
-    current_deck.pop(0)
+    table[-1].get_new_card(current_deck.pop(0))
     print(table[-1])
     print(table[-1].cards)
     print(table[-1].count)
     print()
  
 
-#Check for Naturals in players. Check dealer only if first card is face or ace. 
-# So far doesn't do anything. Just checks.
-
-
-
-    #Checks for naturals. Breaks if there are any. Will need to evaluate scoring outside of the loop.
+#Check for Naturals in players.  
+    #Checks for naturals. Will need to evaluate scoring outside of the loop.
+    #This is so ugly but it works for now.
+    #Need to rethink it completely. Bad implementation.
     player_naturals = False
     dealer_naturals = False
     for i in range(len(table)-1):
@@ -240,22 +278,20 @@ while (playing == True and (len(current_deck) >= 78)):
         print("dealer takes all the chips")
         for i in range(len(table)-1):
             print("Dealer takes %s's wager" % (str(table[i])))
+            table[i].inplay = False
             table[i].payout = True
-        for i in range(len(table)):
-            table[i].reset_new_hand()
-        continue
+        table[-1].inplay = False
     elif (dealer_naturals == True and player_naturals == True):
         for i in range(len(table)-1):
             if table[i].count == 21:
                 print(str(table[i]) + " takes his chips back")
-                table[i].payout = True
             else:
                 print("The Dealer takes " + str(table[i]) + "'s chips")
-                table[i].payout = True
-        for i in range(len(table)):
-            table[i].reset_new_hand()
-        continue
+            table[i].inplay = False
+            table[i].payout = True
+        table[-1].inplay = False
     elif (dealer_naturals == False and player_naturals == True):
+        cont = False
         for i in range(len(table)-1):
             if table[i].count == 21:
                 print("Dealer pays " + str(table[i]) + " 1.5 times the bet")
@@ -263,6 +299,9 @@ while (playing == True and (len(current_deck) >= 78)):
                 table[i].payout = True
             else:
                 print(str(table[i]) + " is still in play")
+                cont = True
+        if cont == False:
+            table[-1].inplay = False
     else:
         print("No naturals, game still in play")
     print()
@@ -282,7 +321,7 @@ while (playing == True and (len(current_deck) >= 78)):
     
             
 
-# Restarts the hand. Doesn't clear the players cards. Should probably put everything in a function instead of this.           
+# Restarts the hand. Should probably put everything in a function instead of this.           
     choice = input("Do you want to play a hand? Enter y/n: ")
     print(choice.lower())
     if choice.lower() == "n":
