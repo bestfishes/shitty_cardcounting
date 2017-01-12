@@ -17,7 +17,7 @@
     # Dealer keeps seperate class?
 # Clean up checking for naturals 
 # Force correct selection on choice of player type
-# Add in - betting values
+# Add in 
 #        - doubling down
 #        - double down after splitting
 #        - Insurance
