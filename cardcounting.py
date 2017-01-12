@@ -29,7 +29,6 @@ class Card(object):
         self.suit = str(self.suit)
         self.name = ''.join((self.rank,self.suit))
         self.facedown = False
-        # Note to self: have not implemented aces high function yet.
 
     def deal_facedown(self):
         self.facedown = True
@@ -51,6 +50,7 @@ class Player(object):
         self.count = 0
         self.inplay = True
         self.payout = False
+        self.strategy = "User Controlled"
 
     def get_new_card(self, card):
         self.cards.append(card)
@@ -100,6 +100,15 @@ class Player(object):
     def __repr__(self):
         return self.name
 
+class Basic_Strategy(Player):
+    def __init__(self,player_number):
+        self.player_number = player_number
+        self.name = "Player%s" % (player_number)
+        self.cards = []
+        self.count = 0
+        self.inplay = True
+        self.payout = False
+        self.strategy = "Basic_Strategy"
 
 
 class Dealer(Player):
@@ -109,6 +118,7 @@ class Dealer(Player):
         self.count = 0
         self.inplay = True
         self.payout = False
+        self.strategy = "Dealer"
 
     def player_choice(self):
         self.cards[1].flip_card_up()
@@ -135,6 +145,10 @@ def create_deck(number_of_decks):
             deck.append(new_card)
     return deck
 
+def choose_player():
+    choice = input("Choose 1 for User Controlled Player and 2 for Basic Strategy AI")
+        
+
     
 def hand_payout(player, dealer):
     if player.count > 21:
@@ -151,24 +165,28 @@ def hand_payout(player, dealer):
     return
 
 #Setting up and shuffling the deck
-number_of_decks = 1
+number_of_decks = 6
 current_deck = create_deck(number_of_decks)
 random.shuffle(current_deck)
 print(current_deck)
 
+player_types = { '1' : Player, '2' : Basic_Strategy}
+
 #Sitting at the table:
+    #This should get rewritten into an option/function to limit the number of players & Force a correct choice
 number_of_players = 2
 table = []
 for player in range(number_of_players):
-    table.append(Player(player + 1))
+    choice = input("Choose 1 for User Controlled Player and 2 for Basic Strategy AI: ")
+    table.append(player_types[choice](player + 1))
     print(str(player))
     print(table[player])
     print(table[player].count)
+    print(table[player].strategy)
 table.append(Dealer())
 
 print(table)
-print(table[1].count)
-print(table[1].cards)
+
 
 #Placing the bet
 # yet to be implemented...
@@ -177,15 +195,13 @@ print(table[1].cards)
 #Also yet to be implemented...
 
 #The deal:
+    #Assumes the re-deal point is 1.5 decks in. 
 #First card
 playing = True
-while (playing == True and (len(current_deck) >= 4*len(table))):
+while (playing == True and (len(current_deck) >= 78)):
     for i in range(len(table)):
         table[i].get_new_card(current_deck[0])
         current_deck.pop(0)
-        print(table[i])
-        print(table[i].cards)
-        print(table[i].count)
 
 #Second card, face up to the tables to players,facedown to the dealer
     for i in range(len(table)-1):
@@ -194,12 +210,14 @@ while (playing == True and (len(current_deck) >= 4*len(table))):
         print(table[i])
         print(table[i].cards)
         print(table[i].count)
+        print()
     current_deck[0].deal_facedown()
     table[-1].get_new_card(current_deck[0])
     current_deck.pop(0)
     print(table[-1])
     print(table[-1].cards)
     print(table[-1].count)
+    print()
  
 
 #Check for Naturals in players. Check dealer only if first card is face or ace. 
@@ -211,7 +229,6 @@ while (playing == True and (len(current_deck) >= 4*len(table))):
     player_naturals = False
     dealer_naturals = False
     for i in range(len(table)-1):
-        print(table[i].count)
         if table[i].count == 21:
             print(str(table[i]) + " has a natural")
             player_naturals = True
@@ -248,13 +265,13 @@ while (playing == True and (len(current_deck) >= 4*len(table))):
                 print(str(table[i]) + " is still in play")
     else:
         print("No naturals, game still in play")
+    print()
 
    
 #Here: Playing a hand.
     for i in range(len(table)):
         while table[i].inplay == True:
             table[i].player_choice()
-    #dealer's hand:
 
     for i in range(len(table)-1):
         while table[i].payout == False:
